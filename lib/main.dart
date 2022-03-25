@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:power_monitor/connection.dart';
+import 'package:power_monitor/config.dart';
+import 'package:power_monitor/power.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _formKey = GlobalKey<FormBuilderState>();
@@ -13,7 +14,6 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -46,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _form() {
-    return FutureBuilder<Connection>(
+    return FutureBuilder<Config>(
       builder: (context, snap) {
         if (!snap.hasData) {
           return const CircularProgressIndicator();
@@ -96,6 +96,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   keyboardType: TextInputType.text,
                   obscureText: true,
                 ),
+                FormBuilderSlider(
+                  name: 'delayMin',
+                  decoration: const InputDecoration(
+                    labelText: 'Delay in minutes',
+                  ),
+                  min: 1,
+                  max: 10,
+                  initialValue: snap.data!.delayMin,
+                ),
                 Row(
                   children: <Widget>[
                     Expanded(
@@ -110,11 +119,12 @@ class _MyHomePageState extends State<MyHomePage> {
                           var validated = _formKey.currentState == null ? false : _formKey.currentState!.validate();
                           if (validated) {
                             final fields = _formKey.currentState!.fields;
-                            Connection c = Connection(
+                            Config c = Config(
                               fields['active']?.value,
                               fields['host']?.value,
                               fields['user']?.value,
                               fields['passwd']?.value,
+                              fields['delayMin']?.value,
                             );
                             _save(c);
                           } else {
@@ -132,7 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           style: TextStyle(color: Colors.white),
                         ),
                         onPressed: () async {
-                          Connection c = await _read();
+                          Config c = await _read();
                           _formKey.currentState?.patchValue({
                             'active': c.active,
                             'host': c.host,
@@ -153,30 +163,25 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<Connection> _read() async {
+  Future<Config> _read() async {
     final prefs = await SharedPreferences.getInstance();
     final active = prefs.getBool('active') ?? false;
     final host = prefs.getString('host') ?? '';
     final user = prefs.getString('user') ?? '';
     final passwd = prefs.getString('passwd') ?? '';
-    return Connection(active, host, user, passwd);
+    final delayMin = prefs.getDouble('delayMin') ?? 5.0;
+    return Config(active, host, user, passwd, delayMin);
   }
 
-  _save(Connection c) async {
+  _save(Config c) async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setBool('active', c.active);
     prefs.setString('host', c.host);
     prefs.setString('user', c.user);
     prefs.setString('passwd', c.passwd);
-  }
-
-  Future<Map<String, dynamic>> _initialValues() async {
-    Connection c = await _read();
-    return {
-      'active': c.active,
-      'host': c.host,
-      'user': c.user,
-      'passwd': c.passwd,
-    };
+    prefs.setDouble('delayMin', c.delayMin);
+    if (c.active) {
+      Power(c).run();
+    }
   }
 }
