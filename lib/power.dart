@@ -49,8 +49,7 @@ class Power {
       },
     );
 
-    final uptime = await client.run('uptime');
-    print(utf8.decode(uptime));
+    await client.run('echo sudo shutdown -h now');
     client.close();
     await client.done;
   }

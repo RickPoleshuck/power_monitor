@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:power_monitor/config.dart';
@@ -36,6 +37,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _platform = const MethodChannel('power_monitor_service');
+
+  void _startService() async {
+    dynamic result = await _platform.invokeMethod('startService');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,6 +58,7 @@ class _MyHomePageState extends State<MyHomePage> {
         if (!snap.hasData) {
           return const CircularProgressIndicator();
         }
+        _startService();
         return Center(
           child: FormBuilder(
             key: _formKey,
